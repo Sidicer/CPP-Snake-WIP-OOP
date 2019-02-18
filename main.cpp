@@ -17,6 +17,30 @@
 HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
 //std::cout << "\261 \262"; - Interesting Snake Design
 
+struct Coordinates {
+	int X, Y;
+};
+
+class Snake {
+	public:
+		int direction,
+			headX,
+			headY,
+			tailX,
+			tailY;
+};
+
+class Console {
+	public:
+		int width,
+			height;
+};
+
+
+Snake snake;
+Console console;
+Coordinates fruit;
+
 // Function to set the cursor at X and Y position in the console window
 void cursor_goto(int x, int y) {
 	COORD coord = { x, y };
@@ -29,71 +53,71 @@ void pause_for_user() {
 	std::cin >> line;
 }
  // Function to get the console window size by rows and columns (1 row/column = 1 pixel)
-void get_console_window_size(int& columns, int& rows) {
+void get_console_window_size() {
 	CONSOLE_SCREEN_BUFFER_INFO csbi;
 	GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi);
-	columns = csbi.srWindow.Right - csbi.srWindow.Left + 1;
-	rows = csbi.srWindow.Bottom - csbi.srWindow.Top + 1;
+	console.width = csbi.srWindow.Right - csbi.srWindow.Left + 1;
+	console.height = csbi.srWindow.Bottom - csbi.srWindow.Top + 1;
 }
 
 // Drawing the "walls" (outside border)
-void draw_window_outline(int width, int height, int score) {
+void draw_window_outline(int score) {
 	_setmode(_fileno(stdout), 0x20000); // For ASCII to work
 
-	for (int i = 0; i < width - 8; i++) { // Top Border (-8 compensates for "S N A K E")
+	for (int i = 0; i < console.width - 8; i++) { // Top Border (-8 compensates for "S N A K E")
 		if (i == 0)
 			wprintf(L"╔");
-		else if (i == width - 9) // -9 compensates for "S N A K E"
+		else if (i == console.width - 9) // -9 compensates for "S N A K E"
 			wprintf(L"╗");
-		else if (i == width / 2)
+		else if (i == console.width / 2)
 			wprintf(L"S N A K E");
 		else
 			wprintf(L"═");
 	}
 
-	cursor_goto(0, height - 2); // Bottom Border
-	for (int i = 0; i < width; i++) { 
+	cursor_goto(0, console.height - 2); // Bottom Border
+	for (int i = 0; i < console.width; i++) {
 		if (i == 0)
 			wprintf(L"╚");
-		else if (i == width - 1)
+		else if (i == console.width - 1)
 			wprintf(L"╝");
 		else
 			wprintf(L"═"); 
 	} 
 
 	cursor_goto(0, 1); // Left border
-	for (int i = 1; i < height - 1; i++) {
+	for (int i = 1; i < console.height - 1; i++) {
 		wprintf(L"║");
 		cursor_goto(0, i);
 	} 
 
-	cursor_goto(width - 1, 1); // Right border
-	for (int i = 1; i < height - 1; i++) { 
+	cursor_goto(console.width - 1, 1); // Right border
+	for (int i = 1; i < console.height - 1; i++) {
 		wprintf(L"║");
-		cursor_goto(width - 1, i);
+		cursor_goto(console.width - 1, i);
 	} 
 
-	cursor_goto(1, height - 1);
-	wprintf(L"Score: %i",score);
+	cursor_goto(1, console.height - 1);
+	wprintf(L"Score: %i",score * 10);
 }
 
-void is_key_pressed(int& direction) {
+void is_key_pressed() {
 	if (_kbhit() && _getch()) {
 		switch (_getch()) {
 			case 72: // code for arrow up
-			if (direction != 2) direction = 1;
+			if (snake.direction != 2) snake.direction = 1;
 			break;
 
 			case 80: // code for arrow down
-			if (direction != 1) direction = 2;
+			if (snake.direction != 1) snake.direction = 2;
 			break;
 
 			case 75: // code for arrow left
-			if (direction != 4) direction = 3;
+			if (snake.direction != 4) snake.direction = 3;
 			break;
 
 			case 77: // code for arrow right
-			if (direction != 3) direction = 4;
+			if (snake.direction != 3) snake.direction = 4;
 			break;
 		}
 	}
@@ -101,76 +125,72 @@ void is_key_pressed(int& direction) {
 
 int main() {
 
-	int score(0),
-		consoleWidth, consoleHeight,
-		snakeHeadX, snakeHeadY,
-		fruitX, fruitY,
-		direction; // 1-2-3-4 = up-down-left-right
+	int score(0), gameOver(false);
 
 	// We get and save the Console window size in "consoleWidth/Height" variables
-	get_console_window_size(consoleWidth, consoleHeight);
-	draw_window_outline(consoleWidth, consoleHeight, score);
+	get_console_window_size();
+	draw_window_outline(score);
 
 	srand(time(NULL));
-	direction = rand() % 4 + 1;
+	snake.direction = rand() % 4 + 1;
 
-	snakeHeadX = consoleWidth / 2;
-	snakeHeadY = consoleHeight / 2;
+	snake.headX = console.width / 2;
+	snake.headY = console.height / 2;
 
 	srand(time(NULL));
-	fruitX = rand() % (consoleWidth - 2) + 1;
-	fruitY = rand() % (consoleHeight - 3) + 1;
-	cursor_goto(fruitX, fruitY);
+	fruit.X = rand() % (console.width - 2) + 1;
+	fruit.Y = rand() % (console.height - 3) + 1;
+	cursor_goto(fruit.X, fruit.Y);
 	wprintf(L"@");
 
-	while(true) {
-		is_key_pressed(direction);
+	while (!gameOver) {
+		is_key_pressed();
 
-		switch (direction) {
+		switch (snake.direction) {
 		case 1:
-			snakeHeadY--;
+			snake.headY--;
 			break;
 		case 2:
-			snakeHeadY++;
+			snake.headY++;
 			break;
 		case 3:
-			snakeHeadX--;
+			snake.headX--;
 			break;
 		case 4:
-			snakeHeadX++;
+			snake.headX++;
 			break;
 		}
 
-		if (snakeHeadX == consoleWidth - 1) snakeHeadX = 1;
-		if (snakeHeadX == 0) snakeHeadX = consoleWidth - 2;
-		if (snakeHeadY == consoleHeight - 2) snakeHeadY = 1;
-		if (snakeHeadY == 0) snakeHeadY = consoleHeight - 3;
+		if (snake.headX == console.width - 1) snake.headX = 1;
+		if (snake.headX == 0) snake.headX = console.width - 2;
+		if (snake.headY == console.height - 2) snake.headY = 1;
+		if (snake.headY == 0) snake.headY = console.height - 3;
 
-		if (snakeHeadX == fruitX && snakeHeadY == fruitY) {
+		if (snake.headX == fruit.X && snake.headY == fruit.Y) {
 			wprintf(L" ");
 
-			score += 10;
-			cursor_goto(1, consoleHeight - 1);
-			wprintf(L"Score: %i", score);
+			score++;
+			cursor_goto(1, console.height - 1);
+			wprintf(L"Score: %i", score * 10);
 			Sleep(50);
 
 			srand(time(NULL));
-			fruitX = rand() % (consoleWidth - 2) + 1;
-			fruitY = rand() % (consoleHeight - 3) + 1;
-			cursor_goto(fruitX, fruitY);
+			fruit.X = rand() % (console.width - 2) + 1;
+			fruit.Y = rand() % (console.height - 3) + 1;
+			cursor_goto(fruit.X, fruit.Y);
 			wprintf(L"@");
 		}
 
 		wprintf(L" ");
-		cursor_goto(snakeHeadX, snakeHeadY);
+		cursor_goto(snake.headX, snake.headY);
 		wprintf(L"█");
-		cursor_goto(snakeHeadX, snakeHeadY);
+		cursor_goto(snake.headX, snake.headY);
 		
-		Sleep(100);
+		Sleep(50);
 	}
 
 	_setmode(_fileno(stdout), _O_TEXT); // Reset from ASCII (to fix "std::cout")
 	std::cin.sync();
 	pause_for_user();
-  return 0;
+    return 0;
 }
