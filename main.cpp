@@ -1,5 +1,3 @@
-using namespace std;
-
 #include <iostream>
 #include <iomanip>
 #include <fstream>
@@ -7,9 +5,9 @@ using namespace std;
 #include <string>
 
 #include <windows.h>
-#include <conio.h>
+#include <conio.h> // _kbhit() / _getch()
 #include <stdlib.h>
-#include <time.h>
+#include <time.h> // For srand randomization
 
 // For ASCII Character Support
 #include <io.h> // need to add this include for _setmode
@@ -27,7 +25,7 @@ void cursor_goto(int x, int y) {
 
 // Function to pause the program while using it/playing
 void pause_for_user() { 
-	string line;
+	std::string line;
 	std::cin >> line;
 }
  // Function to get the console window size by rows and columns (1 row/column = 1 pixel)
@@ -65,67 +63,70 @@ void draw_window_outline(int width, int height, int score) {
 
 	cursor_goto(0, 1); // Left border
 	for (int i = 1; i < height - 1; i++) {
-		wprintf(L"║"); cursor_goto(0, i);
+		wprintf(L"║");
+		cursor_goto(0, i);
 	} 
 
 	cursor_goto(width - 1, 1); // Right border
 	for (int i = 1; i < height - 1; i++) { 
-		wprintf(L"║"); cursor_goto(width - 1, i);
+		wprintf(L"║");
+		cursor_goto(width - 1, i);
 	} 
 
-	_setmode(_fileno(stdout), _O_TEXT); // Reset from ASCII (to fix cout)
-
 	cursor_goto(1, height - 1);
-	cout << "Score: " << score;
+	wprintf(L"Score: %i",score);
 }
 
-void is_key_pressed(int& button_direction) {
+void is_key_pressed(int& direction) {
 	if (_kbhit() && _getch()) {
 		switch (_getch()) {
 			case 72: // code for arrow up
-				button_direction = 1;
-				break;
+			if (direction != 2) direction = 1;
+			break;
 
 			case 80: // code for arrow down
-				button_direction = 2;
-				break;
+			if (direction != 1) direction = 2;
+			break;
 
 			case 75: // code for arrow left
-				button_direction = 3;
-				break;
+			if (direction != 4) direction = 3;
+			break;
 
 			case 77: // code for arrow right
-				button_direction = 4;
-				break;
+			if (direction != 3) direction = 4;
+			break;
 		}
 	}
 }
 
 int main() {
-	int score = 0;
+
+	int score(0),
+		consoleWidth, consoleHeight,
+		snakeHeadX, snakeHeadY,
+		fruitX, fruitY,
+		direction; // 1-2-3-4 = up-down-left-right
 
 	// We get and save the Console window size in "consoleWidth/Height" variables
-	int consoleWidth, consoleHeight;
 	get_console_window_size(consoleWidth, consoleHeight);
 	draw_window_outline(consoleWidth, consoleHeight, score);
 
-	int snakeHeadX, snakeHeadY;
+	srand(time(NULL));
+	direction = rand() % 4 + 1;
+
 	snakeHeadX = consoleWidth / 2;
 	snakeHeadY = consoleHeight / 2;
 
-	// Initialize Snake
-	cursor_goto(snakeHeadX, snakeHeadY); // We start at the centre
-	cout << "\262";
-	cursor_goto(snakeHeadX, snakeHeadY); // Move the cursor back under the "Head"
-	
-	srand(time(NULL));
-	int button_direction; // 1-2-3-4 = up-down-left-right
-	button_direction = rand() % 4 + 1;
+	fruitX = rand() % (consoleWidth + 1) - 2;
+	fruitY = rand() % (consoleHeight + 1) - 5;
+
+	cursor_goto(fruitX, fruitY);
+	wprintf(L"@");
 
 	while(true) {
-		is_key_pressed(button_direction);
+		is_key_pressed(direction);
 
-		switch (button_direction) {
+		switch (direction) {
 		case 1:
 			snakeHeadY--;
 			break;
@@ -145,14 +146,28 @@ int main() {
 		if (snakeHeadY == consoleHeight - 2) snakeHeadY = 1;
 		if (snakeHeadY == 0) snakeHeadY = consoleHeight - 3;
 
-		cout << " ";
+		if (snakeHeadX == fruitX && snakeHeadY == fruitY) {
+			score += 10;
+			cursor_goto(1, consoleHeight - 1);
+			wprintf(L"Score: %i", score);
+
+			fruitX = rand() % (consoleWidth + 1) - 2;
+			fruitY = rand() % (consoleHeight + 1) - 10;
+			Sleep(50);
+			cursor_goto(fruitX, fruitY);
+			wprintf(L"@");
+		}
+
+		wprintf(L" ");
 		cursor_goto(snakeHeadX, snakeHeadY);
-		cout << "\262";
+		wprintf(L"█");
 		cursor_goto(snakeHeadX, snakeHeadY);
 		
 		Sleep(100);
 	}
+
+	_setmode(_fileno(stdout), _O_TEXT); // Reset from ASCII (to fix "std::cout")
 	std::cin.sync();
-	//pause_for_user();
+	pause_for_user();
     return 0;
 }
