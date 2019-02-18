@@ -117,9 +117,9 @@ int main() {
 	snakeHeadX = consoleWidth / 2;
 	snakeHeadY = consoleHeight / 2;
 
-	fruitX = rand() % (consoleWidth + 1) - 2;
-	fruitY = rand() % (consoleHeight + 1) - 5;
-
+	srand(time(NULL));
+	fruitX = rand() % (consoleWidth - 2) + 1;
+	fruitY = rand() % (consoleHeight - 3) + 1;
 	cursor_goto(fruitX, fruitY);
 	wprintf(L"@");
 
@@ -147,13 +147,16 @@ int main() {
 		if (snakeHeadY == 0) snakeHeadY = consoleHeight - 3;
 
 		if (snakeHeadX == fruitX && snakeHeadY == fruitY) {
+			wprintf(L" ");
+
 			score += 10;
 			cursor_goto(1, consoleHeight - 1);
 			wprintf(L"Score: %i", score);
-
-			fruitX = rand() % (consoleWidth + 1) - 2;
-			fruitY = rand() % (consoleHeight + 1) - 10;
 			Sleep(50);
+
+			srand(time(NULL));
+			fruitX = rand() % (consoleWidth - 2) + 1;
+			fruitY = rand() % (consoleHeight - 3) + 1;
 			cursor_goto(fruitX, fruitY);
 			wprintf(L"@");
 		}
@@ -169,5 +172,5 @@ int main() {
 	_setmode(_fileno(stdout), _O_TEXT); // Reset from ASCII (to fix "std::cout")
 	std::cin.sync();
 	pause_for_user();
-    return 0;
+  return 0;
 }
