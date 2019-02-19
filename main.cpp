@@ -17,17 +17,13 @@
 HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
 //std::cout << "\261 \262"; - Interesting Snake Design
 
-struct Coordinates {
-	int X, Y;
-};
-
 class Snake {
 private:
 	int direction,
-		headX,
-		headY,
-		tailX,
-		tailY;
+		  headX,
+		  headY,
+		  tailX,
+		  tailY;
 public:
 	int GetHeadX() { return this->headX; }
 	int GetHeadY() { return this->headY; }
@@ -38,10 +34,20 @@ public:
 	void SetDirection(int dir) { this->direction = dir; }
 };
 
+class Fruit {
+private:
+	int X, Y;
+public:
+	int GetX() {return this->X; }
+	int GetY() {return this->Y; }
+
+	void Set(int X, int Y) { this->X = X; this->Y = Y; }
+};
+
 class Console {
 private:
 	int width,
-		height;
+		  height;
 public:
 	int GetWidth() { return this->width; }
 	int GetHeight() { return this->height; }
@@ -52,8 +58,8 @@ public:
 
 
 Snake snake;
+Fruit fruit;
 Console console;
-Coordinates fruit;
 
 // Function to set the cursor at X and Y position in the console window
 void cursor_goto(int x, int y) {
@@ -152,9 +158,10 @@ int main() {
 	snake.SetHeadY(console.GetHeight() / 2);
 
 	srand(time(NULL));
-	fruit.X = rand() % (console.GetWidth() - 2) + 1;
-	fruit.Y = rand() % (console.GetHeight() - 3) + 1;
-	cursor_goto(fruit.X, fruit.Y);
+	/*fruit.X = rand() % (console.GetWidth() - 2) + 1;
+	fruit.Y = rand() % (console.GetHeight() - 3) + 1;*/
+	fruit.Set(rand() % (console.GetWidth() - 2) + 1, rand() % (console.GetHeight() - 3) + 1);
+	cursor_goto(fruit.GetX(), fruit.GetY());
 	wprintf(L"@");
 
 	while (!gameOver) {
@@ -180,7 +187,7 @@ int main() {
 		if (snake.GetHeadY() == console.GetHeight() - 2) snake.SetHeadY(1);
 		if (snake.GetHeadY() == 0) snake.SetHeadY(console.GetHeight() - 3);
 
-		if (snake.GetHeadX() == fruit.X && snake.GetHeadY() == fruit.Y) {
+		if (snake.GetHeadX() == fruit.GetX() && snake.GetHeadY() == fruit.GetY()) {
 			wprintf(L" ");
 
 			score++;
@@ -189,9 +196,10 @@ int main() {
 			Sleep(50);
 
 			srand(time(NULL));
-			fruit.X = rand() % (console.GetWidth() - 2) + 1;
-			fruit.Y = rand() % (console.GetHeight() - 3) + 1;
-			cursor_goto(fruit.X, fruit.Y);
+			/*fruit.X = rand() % (console.GetWidth() - 2) + 1;
+			fruit.Y = rand() % (console.GetHeight() - 3) + 1;*/
+			fruit.Set(rand() % (console.GetWidth() - 2) + 1, rand() % (console.GetHeight() - 3) + 1);
+			cursor_goto(fruit.GetX(), fruit.GetY());
 			wprintf(L"@");
 		}
 
