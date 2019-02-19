@@ -20,10 +20,10 @@ HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
 class Snake {
 private:
 	int direction,
-		  headX,
-		  headY,
-		  tailX,
-		  tailY;
+	    headX,
+	    headY,
+	    tailX,
+	    tailY;
 public:
 	int GetHeadX() { return this->headX; }
 	int GetHeadY() { return this->headY; }
@@ -47,7 +47,7 @@ public:
 class Console {
 private:
 	int width,
-		  height;
+	    height;
 public:
 	int GetWidth() { return this->width; }
 	int GetHeight() { return this->height; }
