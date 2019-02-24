@@ -1,218 +1,271 @@
 #include <iostream>
-#include <iomanip>
-#include <fstream>
-#include <cmath>
-#include <string>
+#include <vector>
+#include <utility>
+#include <algorithm>
+#include <chrono>
+using namespace std;
 
-#include <windows.h>
-#include <conio.h> // _kbhit() / _getch()
-#include <stdlib.h>
+#include <stdio.h>
+#include <Windows.h>
+#include <conio.h>
 #include <time.h> // For srand randomization
 
-// For ASCII Character Support
-#include <io.h> // need to add this include for _setmode
-#include <fcntl.h> // need to add this include for _O_TEXT
-#include <cstdio> // need to add this include for wprintf
-
-HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-//std::cout << "\261 \262"; - Interesting Snake Design
-
-class Snake {
-private:
-	int direction,
-	    headX,
-	    headY,
-	    tailX,
-	    tailY;
-public:
-	int GetHeadX() { return this->headX; }
-	int GetHeadY() { return this->headY; }
-	int GetDirection() { return this->direction; }
-
-	void SetHeadX(int x) { this->headX = x; }
-	void SetHeadY(int y) { this->headY = y; }
-	void SetDirection(int dir) { this->direction = dir; }
+enum COLOUR
+{
+	FG_BLACK = 0x0000,
+	FG_DARK_BLUE = 0x0001,
+	FG_DARK_GREEN = 0x0002,
+	FG_DARK_CYAN = 0x0003,
+	FG_DARK_RED = 0x0004,
+	FG_DARK_MAGENTA = 0x0005,
+	FG_DARK_YELLOW = 0x0006,
+	FG_GREY = 0x0007,
+	FG_DARK_GREY = 0x0008,
+	FG_BLUE = 0x0009,
+	FG_GREEN = 0x000A,
+	FG_CYAN = 0x000B,
+	FG_RED = 0x000C,
+	FG_MAGENTA = 0x000D,
+	FG_YELLOW = 0x000E,
+	FG_WHITE = 0x000F,
+	BG_BLACK = 0x0000,
+	BG_DARK_BLUE = 0x0010,
+	BG_DARK_GREEN = 0x0020,
+	BG_DARK_CYAN = 0x0030,
+	BG_DARK_RED = 0x0040,
+	BG_DARK_MAGENTA = 0x0050,
+	BG_DARK_YELLOW = 0x0060,
+	BG_GREY = 0x0070,
+	BG_DARK_GREY = 0x0080,
+	BG_BLUE = 0x0090,
+	BG_GREEN = 0x00A0,
+	BG_CYAN = 0x00B0,
+	BG_RED = 0x00C0,
+	BG_MAGENTA = 0x00D0,
+	BG_YELLOW = 0x00E0,
+	BG_WHITE = 0x00F0,
 };
 
-class Fruit {
+enum PIXEL_TYPE
+{
+	PIXEL_SOLID = 0x2588,
+	PIXEL_THREEQUARTERS = 0x2593,
+	PIXEL_HALF = 0x2592,
+	PIXEL_QUARTER = 0x2591,
+};
+
+class console {
+private:
+	unsigned short width,
+					height;
+
+public:
+	unsigned short getWidth() { return this->width; }
+	unsigned short getHeight() { return this->height; }
+
+	void set(unsigned short width, unsigned short height) { this->width = width; this->height = height; }
+	void setWidth(unsigned short width) { this->width = width; }
+	void setHeight(unsigned short height) { this->height = height; }
+
+	std::wstring consoleName = L"Sidicers Console Game";
+};
+
+class player {
+private:
+	int positionX,
+		positionY,
+		lastPositionX[100],
+		lastPositionY[100],
+		size = 0,
+		direction;
+public:
+	int getPositionX() { return this->positionX; }
+	int getPositionY() { return this->positionY; }
+
+	int getLastPositionX(int i) { return this->lastPositionX[i]; }
+	int getLastPositionY(int i) { return this->lastPositionY[i]; }
+
+	int getSize() { return this->size;  }
+	int getDirection() { return this->direction; }
+
+	void set(int positionX, int positionY) { this->positionX = positionX; this->positionY = positionY; }
+	void setPositionX(int positionX) { this->positionX = positionX; }
+	void setPositionY(int positionY) { this->positionY = positionY; }
+
+	void setLast(int lastPositionX[], int lastPositionY[], int i) { this->lastPositionX[i] = lastPositionX[i]; this->lastPositionY[i] = lastPositionY[i]; }
+	void setLastPositionX(int lastPositionX, int i) { this->lastPositionX[i] = lastPositionX; }
+	void setLastPositionY(int lastPositionY, int i) { this->lastPositionY[i] = lastPositionY; }
+
+	void setSize(int size) { this->size = size; }
+	void setDirection(int direction) { this->direction = direction; }
+};
+
+class fruit {
 private:
 	int X, Y;
 public:
-	int GetX() {return this->X; }
-	int GetY() {return this->Y; }
+	int getX() { return this->X; }
+	int getY() { return this->Y; }
 
-	void Set(int X, int Y) { this->X = X; this->Y = Y; }
+	void set(int X, int Y) { this->X = X; this->Y = Y; }
 };
 
-class Console {
-private:
-	int width,
-	    height;
-public:
-	int GetWidth() { return this->width; }
-	int GetHeight() { return this->height; }
+int lastX[100],
+lastY[100];
 
-	void SetWidth(int w) { this->width = w; }
-	void SetHeight(int h) { this->height = h; }
-};
+console MainConsole;
+player MainPlayer;
+fruit Fruit;
 
+int main()
+{
+	auto tp1 = chrono::system_clock::now();
+	auto tp2 = chrono::system_clock::now();
 
-Snake snake;
-Fruit fruit;
-Console console;
+	bool GameOver(false);
 
-// Function to set the cursor at X and Y position in the console window
-void cursor_goto(int x, int y) {
-	COORD coord = { x, y };
-	SetConsoleCursorPosition(hConsole, coord);
-}
-
-// Function to pause the program while using it/playing
-void pause_for_user() {
-	std::string line;
-	std::cin >> line;
-}
-// Function to get the console window size by rows and columns (1 row/column = 1 pixel)
-void get_console_window_size() {
+	// Get Console Info (Width, Height)
 	CONSOLE_SCREEN_BUFFER_INFO csbi;
 	GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), &csbi);
-	console.SetWidth(csbi.srWindow.Right - csbi.srWindow.Left + 1);
-	console.SetHeight(csbi.srWindow.Bottom - csbi.srWindow.Top + 1);
-}
+	MainConsole.set(csbi.srWindow.Right - csbi.srWindow.Left + 1, csbi.srWindow.Bottom - csbi.srWindow.Top + 1);
 
-// Drawing the "walls" (outside border)
-void draw_window_outline(int score) {
-	_setmode(_fileno(stdout), 0x20000); // For ASCII to work
+	// Initiate the Console buffer
+	HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+	SMALL_RECT consoleInfo;
+	consoleInfo = { 0, 0, MainConsole.getWidth() - 1, MainConsole.getHeight() - 1 };
+	CHAR_INFO *screenBuffer = new CHAR_INFO[MainConsole.getWidth()*MainConsole.getHeight()];;
+	memset(screenBuffer, 0, sizeof(CHAR_INFO) * MainConsole.getWidth() * MainConsole.getHeight());
+	SetConsoleWindowInfo(hConsole, TRUE, &consoleInfo);
 
-	for (int i = 0; i < console.GetWidth() - 8; i++) { // Top Border (-8 compensates for "S N A K E")
-		if (i == 0)
-			wprintf(L"╔");
-		else if (i == console.GetWidth() - 9) // -9 compensates for "S N A K E"
-			wprintf(L"╗");
-		else if (i == console.GetWidth() / 2)
-			wprintf(L"S N A K E");
-		else
-			wprintf(L"═");
-	}
+	// Set player position in the middle and with a random direction
+	srand(time(NULL));
+	MainPlayer.set(MainConsole.getWidth() / 2, MainConsole.getHeight() / 2);
+	MainPlayer.setDirection(rand() % 4 + 1);
 
-	cursor_goto(0, console.GetHeight() - 2); // Bottom Border
-	for (int i = 0; i < console.GetWidth(); i++) {
-		if (i == 0)
-			wprintf(L"╚");
-		else if (i == console.GetWidth() - 1)
-			wprintf(L"╝");
-		else
-			wprintf(L"═");
-	}
+	// Place fruit in random position
+	srand(time(NULL));
+	Fruit.set(rand() % (MainConsole.getWidth() - 2) + 1, rand() % (MainConsole.getHeight() - 3) + 1);
 
-	cursor_goto(0, 1); // Left border
-	for (int i = 1; i < console.GetHeight() - 1; i++) {
-		wprintf(L"║");
-		cursor_goto(0, i);
-	}
+	while (!GameOver)
+	{
+		// Tracking time passed
+		tp2 = chrono::system_clock::now();
+		chrono::duration<float> elapsedTime = tp2 - tp1;
+		tp1 = tp2;
+		float timePassed = elapsedTime.count();
 
-	cursor_goto(console.GetWidth() - 1, 1); // Right border
-	for (int i = 1; i < console.GetHeight() - 1; i++) {
-		wprintf(L"║");
-		cursor_goto(console.GetWidth() - 1, i);
-	}
+		// Draw Borders
+		for (int i = 0; i < MainConsole.getWidth()*MainConsole.getHeight(); i++) {
+			screenBuffer[i].Char.UnicodeChar = L' ';														// Fill empty spaces with ' '
+			screenBuffer[i].Attributes = BG_DARK_BLUE | FG_WHITE;											// Set the background color to DARK RED
 
-	cursor_goto(1, console.GetHeight() - 1);
-	wprintf(L"Score: %i", score * 10);
-}
+			if (i <= MainConsole.getWidth() - 1)															// Top Border
+				screenBuffer[i].Char.UnicodeChar = L'═';
 
-void is_key_pressed() {
-	if (_kbhit() && _getch()) {
-		switch (_getch()) {
-		case 72: // code for arrow up
-			if (snake.GetDirection() != 2) snake.SetDirection(1);
-			break;
+			if (i >= (MainConsole.getHeight() * MainConsole.getWidth() - MainConsole.getWidth()))			// Bottom Border
+				screenBuffer[i].Char.UnicodeChar = L'═';
 
-		case 80: // code for arrow down
-			if (snake.GetDirection() != 1) snake.SetDirection(2);
-			break;
+			for (int j = 1; j < MainConsole.getHeight() - 1; j++)											// Left Border
+				if (i == j * MainConsole.getWidth())
+					screenBuffer[i].Char.UnicodeChar = L'║';
 
-		case 75: // code for arrow left
-			if (snake.GetDirection() != 4) snake.SetDirection(3);
-			break;
+			for (int j = 1; j < MainConsole.getHeight() - 1; j++)											// Right Border
+				if (i == j * MainConsole.getWidth() + MainConsole.getWidth() - 1)
+					screenBuffer[i].Char.UnicodeChar = L'║';
 
-		case 77: // code for arrow right
-			if (snake.GetDirection() != 3) snake.SetDirection(4);
-			break;
+			if (i == 0)																						// Top Left Corner
+				screenBuffer[i].Char.UnicodeChar = L'╔';
+			if (i == MainConsole.getWidth() - 1)															// Top Right Corner
+				screenBuffer[i].Char.UnicodeChar = L'╗';
+			if (i == (MainConsole.getHeight() - 1) * MainConsole.getWidth())								// Bottom Left Corner
+				screenBuffer[i].Char.UnicodeChar = L'╚';
+			if (i == (MainConsole.getHeight() - 1) * MainConsole.getWidth() + MainConsole.getWidth() - 1)	// Bottom Right Corner
+				screenBuffer[i].Char.UnicodeChar = L'╝';
 		}
-	}
-}
 
-int main() {
+		// Change the direction with keyboard presses
+		if (_kbhit() && _getch()) {
+			switch (_getch()) {
+				case 72: if (MainPlayer.getDirection() != 2) MainPlayer.setDirection(1); // code for arrow up
+				break;
+				case 80: if (MainPlayer.getDirection() != 1) MainPlayer.setDirection(2); // code for arrow down
+				break;
+				case 75: if (MainPlayer.getDirection() != 4) MainPlayer.setDirection(3);// code for arrow left
+				break;
+				case 77: if (MainPlayer.getDirection() != 3) MainPlayer.setDirection(4);// code for arrow right
+				break;
+			}
+		}
 
-	int score(0), gameOver(false);
-
-	// We get and save the Console window size in "consoleWidth/Height" variables
-	get_console_window_size();
-	draw_window_outline(score);
-
-	srand(time(NULL));
-	snake.SetDirection(rand() % 4 + 1);
-
-	snake.SetHeadX(console.GetWidth() / 2);
-	snake.SetHeadY(console.GetHeight() / 2);
-
-	srand(time(NULL));
-	/*fruit.X = rand() % (console.GetWidth() - 2) + 1;
-	fruit.Y = rand() % (console.GetHeight() - 3) + 1;*/
-	fruit.Set(rand() % (console.GetWidth() - 2) + 1, rand() % (console.GetHeight() - 3) + 1);
-	cursor_goto(fruit.GetX(), fruit.GetY());
-	wprintf(L"@");
-
-	while (!gameOver) {
-		is_key_pressed();
-
-		switch (snake.GetDirection()) {
-		case 1:
-			snake.SetHeadY(snake.GetHeadY()-1); // snakeHeadY--;
+		// Move player by the direction that it's facing
+		switch (MainPlayer.getDirection()) {
+			case 1: MainPlayer.setPositionY(MainPlayer.getPositionY() - 1);
 			break;
-		case 2:
-			snake.SetHeadY(snake.GetHeadY()+1);
+			case 2: MainPlayer.setPositionY(MainPlayer.getPositionY() + 1);
 			break;
-		case 3:
-			snake.SetHeadX(snake.GetHeadX()-1);
+			case 3: MainPlayer.setPositionX(MainPlayer.getPositionX() - 1);
 			break;
-		case 4:
-			snake.SetHeadX(snake.GetHeadX()+1);
+			case 4: MainPlayer.setPositionX(MainPlayer.getPositionX() + 1);
 			break;
 		}
 
-		if (snake.GetHeadX() == console.GetWidth() - 1) snake.SetHeadX(1);
-		if (snake.GetHeadX() == 0) snake.SetHeadX(console.GetWidth() - 2);
-		if (snake.GetHeadY() == console.GetHeight() - 2) snake.SetHeadY(1);
-		if (snake.GetHeadY() == 0) snake.SetHeadY(console.GetHeight() - 3);
+		// If border is touched - move to the opposite side
+		if (MainPlayer.getPositionX() == MainConsole.getWidth() - 1) MainPlayer.setPositionX(1);
+		if (MainPlayer.getPositionX() == 0) MainPlayer.setPositionX(MainConsole.getWidth() - 2);
+		if (MainPlayer.getPositionY() == MainConsole.getHeight() - 1) MainPlayer.setPositionY(2);
+		if (MainPlayer.getPositionY() == 0) MainPlayer.setPositionY(MainConsole.getHeight() - 3);
 
-		if (snake.GetHeadX() == fruit.GetX() && snake.GetHeadY() == fruit.GetY()) {
-			wprintf(L" ");
-
-			score++;
-			cursor_goto(1, console.GetHeight() - 1);
-			wprintf(L"Score: %i", score * 10);
-			Sleep(50);
-
+		// If fruit is "touched"
+		if (MainPlayer.getPositionX() == Fruit.getX() && MainPlayer.getPositionY() == Fruit.getY()) {
+			MainPlayer.setSize(MainPlayer.getSize() + 1);
+			// Place fruit in random position
 			srand(time(NULL));
-			/*fruit.X = rand() % (console.GetWidth() - 2) + 1;
-			fruit.Y = rand() % (console.GetHeight() - 3) + 1;*/
-			fruit.Set(rand() % (console.GetWidth() - 2) + 1, rand() % (console.GetHeight() - 3) + 1);
-			cursor_goto(fruit.GetX(), fruit.GetY());
-			wprintf(L"@");
+			Fruit.set(rand() % (MainConsole.getWidth() - 2) + 1, rand() % (MainConsole.getHeight() - 3) + 1);
 		}
 
-		wprintf(L" ");
-		cursor_goto(snake.GetHeadX(), snake.GetHeadY());
-		wprintf(L"█");
-		cursor_goto(snake.GetHeadX(), snake.GetHeadY());
+		if (MainPlayer.getSize() > 0) {
+			for (int i = 0; i < MainPlayer.getSize(); i++) {
+				if (MainPlayer.getSize() > 1) {
+					lastX[i] = lastX[i-1];
+					lastY[i] = lastY[i-1];
+				}
+				else {
+					lastX[i] = MainPlayer.getPositionX();
+					lastY[i] = MainPlayer.getPositionY();
+				}
+			}
+		}
+
+		// Draw SNAKE Title
+		string Text = "S N A K E";
+		for (int i = 0; i < Text.size(); i++)  {
+			screenBuffer[0 * MainConsole.getWidth() + 1 + i].Char.UnicodeChar = Text[i];
+			screenBuffer[0 * MainConsole.getWidth() + 1 + i].Attributes = FG_WHITE | BG_DARK_BLUE;
+		}
+
+		// Draw Fruit
+		screenBuffer[Fruit.getY() * MainConsole.getWidth() + Fruit.getX()].Char.UnicodeChar = L'■';
+		screenBuffer[Fruit.getY() * MainConsole.getWidth() + Fruit.getX()].Attributes = FG_RED | BG_DARK_BLUE;
+
+		// Draw Player
+		screenBuffer[MainPlayer.getPositionY() * MainConsole.getWidth() + MainPlayer.getPositionX()].Char.UnicodeChar = PIXEL_SOLID;
+		screenBuffer[MainPlayer.getPositionY() * MainConsole.getWidth() + MainPlayer.getPositionX()].Attributes = FG_DARK_GREY;
+
+		if (MainPlayer.getSize() > 0) {
+			for (int i = 0; i < MainPlayer.getSize(); i++) {
+				// Draw Player
+				screenBuffer[lastY[i] * MainConsole.getWidth() + lastX[i]].Char.UnicodeChar = L'O';
+				screenBuffer[lastY[i] * MainConsole.getWidth() + lastX[i]].Attributes = FG_DARK_GREY;
+			}
+		}
+
+		// Update screen and console info
+		wchar_t s[256];
+		swprintf_s(s, 256, L"%s [Score: %i] [FPS: %3.2f] ", MainConsole.consoleName.c_str(), MainPlayer.getSize() * 10, 1.0f / timePassed);
+		SetConsoleTitle(s);
+		WriteConsoleOutput(hConsole, screenBuffer, { (short)MainConsole.getWidth(), (short)MainConsole.getHeight() }, { 0,0 }, &consoleInfo);
 
 		Sleep(50);
 	}
-
-	_setmode(_fileno(stdout), _O_TEXT); // Reset from ASCII (to fix "std::cout")
-	std::cin.sync();
-	pause_for_user();
 	return 0;
 }
